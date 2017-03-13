@@ -56,29 +56,27 @@ package object barneshut {
   ) extends Quad {
     val centerX: Float = (nw.centerX + ne.centerX + sw.centerX + se.centerX) / 4
     val centerY: Float = (nw.centerY + ne.centerY + sw.centerY + se.centerY) / 4
-    val size: Float = nw.size + ne.size
+    val size: Float = nw.size * 2
     val mass: Float = nw.mass + ne.mass + sw.mass + se.mass
     val massX: Float = if (mass equals 0) centerX else (nw.mass * nw.massX + ne.mass * nw.massX + sw.mass * sw.massX + se.mass * sw.massX) / mass
     val massY: Float = if (mass equals 0) centerY else (nw.mass * nw.massY + ne.mass * nw.massY + sw.mass * sw.massY + se.mass * sw.massY) / mass
     val total: Int = nw.total + ne.total + sw.total + se.total
 
     def insert(b: Body): Fork = {
-      if(b.x <= centerX && b.y <= centerY) Fork(nw.insert(b), ne, sw, se)
-      else if(b.x > centerX && b.y <= centerY) Fork(nw, ne.insert(b), sw, se)
-      else if(b.x <= centerX && b.y > centerY) Fork(nw, ne, sw.insert(b), se)
-      else if(b.x > centerX && b.y > centerY) Fork(nw, ne, sw, se.insert(b))
-      else Fork(nw, ne, sw, se)
+      if(b.x < centerX && b.y < centerY) Fork(nw.insert(b), ne, sw, se)
+      else if(b.x < centerX && b.y >= centerY) Fork(nw, ne.insert(b), sw, se)
+      else if(b.x >= centerX && b.y < centerY) Fork(nw, ne, sw.insert(b), se)
+      else Fork(nw, ne, sw, se.insert(b))
     }
   }
 
   case class Leaf(centerX: Float, centerY: Float, size: Float, bodies: Seq[Body])
   extends Quad {
-    val mass: Float = bodies.foldLeft(0f)(_+_.mass)
-    val massX: Float = bodies.foldLeft(0f)((acc:Float, b:Body) => acc + b.mass * b.x)/mass
-    val massY: Float = bodies.foldLeft(0f)((acc:Float, b:Body) => acc + b.mass * b.y)/mass
-    val total: Int = bodies.length
+    val totalMass = bodies.foldLeft(0F)((b1, b2) => b2.mass + b1)
+    val (mass, massX, massY) = (totalMass: Float, bodies(0).x : Float, bodies(0).y : Float)
+    val total: Int = bodies.size
     def insert(b: Body): Quad =
-      if(size > minimumSize)
+      if(size <= minimumSize)
         Leaf(centerX, centerY, size, bodies :+ b)
       else {
         (bodies :+ b).foldLeft(
